@@ -17,9 +17,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const response = await s3Client.send(command);
 
-    const urls = (response.Contents || []).map((obj) => {
-      return `https://${process.env.NEXT_PUBLIC_BUCKET}.s3.${process.env.NEXT_PUBLIC_REGION}.amazonaws.com/${obj.Key}`;
-    });
+    const seen = new Set<string>();
+    const urls: string[] = [];
+
+    for (const obj of response.Contents || []) {
+      const name = obj.Key?.split('/').pop(); // solo el nombre del archivo
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+
+      urls.push(`https://${process.env.NEXT_PUBLIC_BUCKET}.s3.${process.env.NEXT_PUBLIC_REGION}.amazonaws.com/${obj.Key}`);
+    }
 
     res.status(200).json({ urls });
   } catch (error) {
